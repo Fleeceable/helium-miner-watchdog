@@ -117,9 +117,6 @@ const bot = new TelegramBot(token, {polling: true});
         else if (msg.text == '/oracle'){
             getoracleprice(true)
         }
-        else if (msg.text == '/test'){
-
-        }
         else if (msg.text.slice(msg.text.length - 4) == '_ACK'){
             for (let i = 0; i <= arrMiners.length-1; i++){
                 if (msg.text == '/' + i + '_ACK'){
@@ -149,12 +146,6 @@ const bot = new TelegramBot(token, {polling: true});
 
         }
 	});
-
-/********************* */
-
-
-
-
 
 //**********GET LOCAL TIME**********
 
@@ -201,7 +192,7 @@ setInterval(function(){
 //**********CHECK MINERS LOCAL DIAGNOSTIC PAGE**********
 function checkminer (arrElement,reportStatus){
     if (arrMiners[arrElement].MinerWatchdog == 'true' && arrMiners[arrElement].MinerLocalIP !='' && arrMiners[arrElement].MinerManufacture == 'Nebra') {
-        let chk = http.get("http://" + arrMiners[arrElement].MinerLocalIP + "/?json=true",(res) => {
+        let chk = http.get("http://" + arrMiners[arrElement].MinerLocalIP + "/json",(res) => {
             let body = "";  
             res.on("data", (chunk) => {
                 body += chunk;
