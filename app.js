@@ -6,7 +6,7 @@
 //**********************CHANGELOG***********************//
 const watchdogversion = 'v1.0'
 
-//************TIME SETTINGS************
+//************TIME VARIABLES************
 
 var block_height_back 												//How many blocks can miner be back from blockchain [Default:10]
 var miner_check_time 													//Cyclical check time in minutes [Default: 5]
@@ -18,18 +18,22 @@ var token ;
 var chatId ;
 arrMiners = [];
 AccountAddress = [];
-//************!!!!!!!!!!!!!DO NOT EDIT BELOW THIS LINE!!!!!!!!!!!!************
+//*****************SYSTEM*****************
 
 const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 const https = require('https');
+const options = {
+    headers: {
+        'User-Agent': 'helium-miner-watchdog',
+    }
+};
 
 
 var today = new Date();
 var time ;
 
 var MinerHealth = []; // Sub array for every miner -> [0] Miner Block height | [1] Blockchain block height | [2] FW version | [3] Connected to blockchain | [4] Miner relayd | [5] ECC Detected | [6] Bluetooth detected | [7] Lora operational | [8] Update time | [9] Error count to load json | [10] Block height error | [11] Miner overall status | [12] Heltec helium FW
-var firstcycle = true;
 let oraclecurrentprice = 0;
 let helpvar = ['', ''];
 let ackalert = [];
@@ -37,6 +41,7 @@ let ackalert = [];
 
 gettime();
 
+//*****************READING CONFIG FILE*****************
 const fs = require('fs')
 
 fs.readFile('./config.js', 'utf8' , (err, data) => {
@@ -103,6 +108,7 @@ const bot = new TelegramBot(token, {polling: true});
         }
         else if (msg.text == '/30'){
             checkbalance(30)
+        
         }
         else if (msg.text == '/total'){
             checkbalance(0)
@@ -110,9 +116,18 @@ const bot = new TelegramBot(token, {polling: true});
         else if (msg.text == '/rewards'){
             bot.sendMessage(chatId, 'Checking any new rewards...')
             getoracleprice()
-            for (let i = 0; i <= arrMiners.length-1; i++){
-                checkrewards(i,true)
-            }
+            var q=0
+            var rewardcheckinterval = setInterval(function(){
+                if (q<arrMiners.length){
+                    console.log("[" + time + "] - " + arrMiners[q].MinerNickname + ' - Checking rewards...')
+                    checkrewards(q,false) 
+                    q++   
+                }
+                else {
+                    clearInterval(rewardcheckinterval)
+                    bot.sendMessage(chatId, 'Reward checking finished...')
+                }
+            },5000);
         }
         else if (msg.text == '/oracle'){
             getoracleprice(true)
@@ -149,23 +164,20 @@ const bot = new TelegramBot(token, {polling: true});
 
 //**********GET LOCAL TIME**********
 
-bot.sendMessage(chatId, 'Watchdog [' + watchdogversion + '] started...')
-console.log("[" + time + "] - " + 'Watchdog [' + watchdogversion + '] started...')
+bot.sendMessage(chatId, 'Helium miner watchdog [' + watchdogversion + '] started...')
+console.log("[" + time + "] - " + 'Helium miner watchdog [' + watchdogversion + '] started...')
 getoracleprice()
-
-
- // console.log(config)
-  //miner1 = config.Miners[0].MinerNickname
-  //miner2 = config.Miners[1].MinerNickname
-  //  console.log(config.Miners[0].MinerManufacture)
-
 
 //**********INITIALIZATION**********
 for (let o = 0; o < arrMiners.length; o++){
     MinerHealth[o] = new Array();
     MinerHealth[o][2] = '';
+    MinerHealth[o][12] = '';
     MinerHealth[o][9]=0;
     MinerHealth[o][10]=false
+    MinerHealth[o][4]=false
+    MinerHealth[o][7]=true
+    MinerHealth[o][3]=true
     ackalert[o]=false
 }
 
@@ -184,9 +196,16 @@ setInterval(function(){
     getoracleprice(false)
     console.log("[" + time + "] - " + 'Checking rewards...');
     
-	for (let i = 0; i <= arrMiners.length-1; i++){
-        checkrewards(i)
-    }
+    var w=0
+    var rewardcheckinterval2 = setInterval(function(){
+        if (w<arrMiners.length){
+            checkrewards(w,false) 
+            w++   
+        }
+        else {
+            clearInterval(rewardcheckinterval2)
+        }
+    },5000);
 },RewardCheckTime*60*1000);
 
 //**********CHECK MINERS LOCAL DIAGNOSTIC PAGE**********
@@ -201,14 +220,7 @@ function checkminer (arrElement,reportStatus){
             res.on("end", () => {
                 if (body.charAt(0) == '{') {
                     let json = JSON.parse(body);
-                    if (firstcycle == true) {
-                        MinerHealth[arrElement][3]= json.MC
-                        MinerHealth[arrElement][4]= json.MR
-                        MinerHealth[arrElement][7]= json.LOR
-                        if (arrElement == arrMiners.length-1) {
-                            firstcycle = false
-                        }
-                    }
+                    //console.log(json)
                     MinerHealth[arrElement][9]=0
                     MinerHealth[arrElement][0]= json.MH             //miner block height
                     MinerHealth[arrElement][1]= json.BCH            //blockchain block height
@@ -230,27 +242,31 @@ function checkminer (arrElement,reportStatus){
                         console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Height Status: [' + json.MH + '/' + json.BCH + "] | " + 'FW version: [' + json.FW + "] | " +'Miner Relayed: [' + json.MR + '] | '+ 'LoRa Operational: [' + json.LOR + '] | ' + 'Blockchain Connection [' + json.MC + '] | ' + 'Last updated: [' + json.last_updated + ']');
                     }
                     else {
-                        if (json.MH < json.BCH-block_height_back) {
-                            if (MinerHealth[arrElement][10] == false) {
-                                bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname + '\nMiner status: ERROR! - Your miner blockchain height is back '+ (json.BCH - json.MH)  + ' blocks.' + ' Height Status: ' + json.MH + '/' + json.BCH);
-                                console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Miner status: ERROR! - Your miner blockchain height is back more than ' + block_height_back + ' blocks.' + ' Height Status: ' + json.MH + '/' + json.BCH);
-                                MinerHealth[arrElement][10]=true;
+                        if (json.MH != 'null' && json.BCH != 'null'){
+                            if (json.MH < json.BCH-block_height_back) {
+                                if (MinerHealth[arrElement][10] == false) {
+                                    bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname + '\nMiner status: ERROR! - Your miner blockchain height is back '+ (json.BCH - json.MH)  + ' blocks.' + ' Height Status: ' + json.MH + '/' + json.BCH);
+                                    console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Miner status: ERROR! - Your miner blockchain height is back more than ' + block_height_back + ' blocks.' + ' Height Status: ' + json.MH + '/' + json.BCH);
+                                    MinerHealth[arrElement][10]=true;
+                                }
                             }
-                        }
-                        else {
-                            if (MinerHealth[arrElement][10] == true) {
-                                console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Miner status: OK - Your miner is back on action.' + ' Height Status: ' + json.MH + '/' + json.BCH)
-                                bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname + '\nMiner status: OK - Your miner is back on action.' + ' Height Status: ' + json.MH + '/' + json.BCH)
-                                MinerHealth[arrElement][10]=false;
-                                ackalert[arrElement]=true
+                            else {
+                                if (MinerHealth[arrElement][10] == true) {
+                                    console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Miner status: OK - Your miner is back on action.' + ' Height Status: ' + json.MH + '/' + json.BCH)
+                                    bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname + '\nMiner status: OK - Your miner is back on action.' + ' Height Status: ' + json.MH + '/' + json.BCH)
+                                    MinerHealth[arrElement][10]=false;
+                                    ackalert[arrElement]=true
+                                }
                             }
                         }
                         if (MinerHealth[arrElement][2] != '') {
-                            if (MinerHealth[arrElement][2] != json.FW) {
-                                MinerHealth[arrElement][2] = json.FW;
-                                console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname +' Miner FW UPDATE: - Your miner FW version is updated to ' + json.FW);
-                                bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname +' Miner FW UPDATE: - Your miner FW version is updated to ' + json.FW)
-                                ackalert[arrElement]=true
+                            if (json.FW != 'undefined'){
+                                if (MinerHealth[arrElement][2] != json.FW) {
+                                    MinerHealth[arrElement][2] = json.FW;
+                                    console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname +' Miner FW UPDATE: - Your miner FW version is updated to ' + json.FW);
+                                    bot.sendMessage(chatId, arrMiners[arrElement].MinerNickname +' Miner FW UPDATE: - Your miner FW version is updated to ' + json.FW)
+                                    ackalert[arrElement]=true
+                                }
                             }
                         }
                         else {
@@ -338,7 +354,6 @@ function checkminer (arrElement,reportStatus){
         })
     }
     else if (arrMiners[arrElement].MinerWatchdog == 'true' && arrMiners[arrElement].MinerLocalIP !='' && arrMiners[arrElement].MinerManufacture == 'Heltec') {
-        //console.log('Heltec check')
         const fetch = require('node-fetch');
 
         fetch("http://" + arrMiners[arrElement].MinerLocalIP + "/apply.php", {
@@ -371,7 +386,6 @@ function checkminer (arrElement,reportStatus){
                         }
                     }
                 }
-            //console.log('errrrrrrror!!')
             return
         });
 
@@ -419,7 +433,6 @@ function checkminer (arrElement,reportStatus){
                     MinerHealth[arrElement][2] = json.firmware;
                 }
             }
-            //console.log(json)
         }
     }
 }
@@ -428,7 +441,8 @@ function checkminer (arrElement,reportStatus){
 //**********CHECK HNT PRICE**********
 function getoracleprice(reportPrice){
 	let url = 'https://api.helium.io/v1/oracle/prices/current';
-	https.get(url,(res) => {
+
+	https.get(url,options,(res) => {
 		let body = "";
 		res.on("data", (chunk) => {
 			body += chunk;
@@ -451,7 +465,6 @@ function getoracleprice(reportPrice){
             }
 		});
 	}).on("error", (error) => {
-		//console.error(error.message);
 		console.log("[" + time + "] - " + 'Helium Explorer API connection error to get oracle price. Please try again later...');
         if (reportPrice){
             bot.sendMessage(chatId, 'Helium Explorer API connection error. Please try again later...')
@@ -462,23 +475,16 @@ function getoracleprice(reportPrice){
 function checkrewards (arrElement, reply){
     if (arrMiners[arrElement].RewardCheck == 'true' && arrMiners[arrElement].PublicAddress !=''){
         let url = 'https://api.helium.io/v1/hotspots/' + arrMiners[arrElement].PublicAddress + '/activity?filter_types=';
-        console.log(url)
-        console.log("[" + time + "]")
-        https.get(url,(res) => {
-            //console.log(res)
+        https.get(url,options,(res) => {
             let body = "";
             res.on("data", (chunk) => {
                 body += chunk;
             });
             res.on("end", () => {
-                console.log('Checking ENDED!!!')
-                //console.log(body)
                 if (body.charAt(0) == '{') {
-                    //console.log(body)
                     let json = JSON.parse(body);
                     if (json.data) {
                         if (json.data.length >= 1) {
-                            console.log(json.data)
                             if (json.data[0].type == 'rewards_v2') {
                                 let reward_amount = 0;
                                 if (helpvar[arrElement] != json.data[0].hash) {
@@ -504,6 +510,9 @@ function checkrewards (arrElement, reply){
                         }
                     }
                 }
+                else {
+                    console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname +  " - ERROR! Helium Explorer API request answer was not in Json format." );
+                }
             })
         }).on("error", (error) => {
             console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Helium Explorer API connection error to check rewards. Will try again later...');
@@ -523,7 +532,8 @@ function checkbalance (totalchecktime) {
                 else {
                     url = 'https://api.helium.io/v1/accounts/' + AccountAddress[i].PublicAddress + '/rewards/sum?min_time=-' + totalchecktime + "%20day&bucket=day";
                 }
-                https.get(url,(res) => {
+
+                https.get(url,options,(res) => {
                     let body = "";
                     res.on("data", (chunk) => {
                         body += chunk;
@@ -538,7 +548,7 @@ function checkbalance (totalchecktime) {
                                     setTimeout(function(){
                                         resolve(rew)
                                         return
-                                    },100);
+                                    },1000);
                                 }
                             }
                             else { 
@@ -548,7 +558,7 @@ function checkbalance (totalchecktime) {
                                         setTimeout(function(){
                                             resolve(rew)
                                             return
-                                        },100);
+                                        },1000);
                                     }
                                 }
                             }   
@@ -558,12 +568,11 @@ function checkbalance (totalchecktime) {
                     console.log("[" + time + "] - " + arrMiners[arrElement].MinerNickname + ' Helium Explorer API connection error to check rewards. Please try again later...');
                 });
             }
-    }, 100); 
+    }, 3000); 
     });
 
     async function asyncFunc() {
         let result = await promise; 
-        //console.log(result)
         if (totalchecktime >0){
             bot.sendMessage(chatId, 'Miner(s) ' + totalchecktime + ' day rewards: ' + result.toFixed(2) + 'HNT  /  ' + (result*oraclecurrentprice).toFixed(2) + ' $')
             console.log("[" + time + "] - " + 'Miner(s) ' + totalchecktime + ' day rewards: ' + result.toFixed(2) + 'HNT  /  ' + (result*oraclecurrentprice).toFixed(2) + ' $')
@@ -576,3 +585,5 @@ function checkbalance (totalchecktime) {
     asyncFunc();
 }
 }
+
+
