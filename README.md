@@ -84,10 +84,14 @@ Note: Every time you change password you need to copy new authorization key.
   Create folder to somewhere in your hard drive. Example C:\Helium and download both files from github to there (app.js and config.js)<br>
   Open config.js with visual studio code and edit file. Save it and you are done with settings. <br>
   <br>
-  Not let's install fetch module. Enter command to Visual Studio Code terminal -> "cd C:\Helium"<br>
-  Now enter command -> "npm init -y" and after that this -> "npm install node-fetch@2.0"<br>
-  <br>
-  Well done. Now let's start the code with command -> "node app.js" and you should see that it notify you in telegram that bot is running.
-  
-  
-  
+  Not let's install some modules. <br>
+  1. Enter command in Visual Studio Code terminal -> "cd C:\Helium"<br>
+  2. "npm init -y" <br>
+  3. "npm install node-fetch@2.0" <br>
+  4. "npm i node-telegram-bot-api" <br><br>
+
+  Well done. Now let's start the code with command -> **"node app.js"** and you should see that it notify you in telegram that bot is running. <br> <br> 
+  Type **/info** in Telegram to see full list of commands: <br>
+  ![image](https://user-images.githubusercontent.com/90242002/143021031-7746b1d2-cf5a-4f2b-a5d4-303fc869175f.png) <br> <br>
+
+  Have fun and don't forget to dip some HNT-s...
