@@ -16,6 +16,10 @@ You will get all kind of notifications:
 5. You got reward if you have enabled that on config file. 
 6. You can check your accounts 1 day, 7 day, 14 day, 30 day, total rewards.
 
+<h2> Tutorials </h2>
+  Here is youtube video how to set up telegram bot: https://youtu.be/bZZeHinUw_o <br>
+Here is youtube video how to set up watchdog: https://youtu.be/Jo5iZ4GoeNA <br>
+
 <b><h1>Telegram</h1></b><br>
 Create a bot using BotFather. Here is video link how to do that:
 https://youtu.be/XoryoE9V88E?t=104 <br>
@@ -94,4 +98,4 @@ Note: Every time you change password you need to copy new authorization key.
   Type **/info** in Telegram to see full list of commands: <br>
   ![image](https://user-images.githubusercontent.com/90242002/143021031-7746b1d2-cf5a-4f2b-a5d4-303fc869175f.png) <br> <br>
 
-  Have fun and don't forget to dip some HNT-s...
+  Have fun and don't forget to dip some HNT...
