@@ -4,8 +4,17 @@ If watchdog is useful for you, feel free to dip some HNT. <br>
 14faPbrrcdhNSG2EXiGuox4qkfcWNJmHmYYeSA8s8MvYcAeSxEE<br>
 
 
-  This document describes how to keep an eye of your Helium miner(s). Supported miners are **NEBRA** and **HELTEC**.<br>
-  Basically you need some hardware (I used Linux Mint) and operating system where you can run nodejs (You can run it on windows machine also but it needs to be on site 24/7 and running. When using windows I suggest to use Visual Studio Code). Program checks cyclically if miner UI works and takes data from your miner to analyze if everything is okay. Notification is done via Telegram app (IOS and Android). <br>Here is example: <br>
+This is a tutorial to help you set up your own monitoring Bot to remotely monitor your helium miner(s). This code will only support the following miners: <br>
+
+**Nebra** <br>
+**Heltec** <br>
+
+To start you will need to have a PC and either of the software below, I use Linux Mint that can run nodejs. You can run it on windows machine also but that would need to be running 24/7.  If you are  using Windows I suggest using **Visual Studio Code**. <br> 
+
+The program checks cyclically, if the miner UI is functioning. It will extract data from your miner to analyse and make sure the miner is connected and functional.  If there are any issues the program will send notifications via the telegram  app.<br><br>
+
+Here is example:<br>
+
 ![image](https://user-images.githubusercontent.com/90242002/142509381-70530616-6111-4b76-981d-3bcb64ca91a0.png) <br>
 
 You will get all kind of notifications:
